@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atraso — quanto o seu voo costuma atrasar</title>
+  <meta name="description" content="Pontualidade dos voos domésticos regulares no Brasil por rota, companhia e horário, com dados abertos da ANAC." />
+  <meta name="theme-color" content="#0f1a2b" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1a2b'/%3E%3Cpath d='M7 18l18-7-6 13-3-5z' fill='%23eda100'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip" href="#rota">Pular para a busca</a>
+
+  <header class="top">
+    <div class="wrap top-row">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">✈</span>
+        <span class="brand-name">Atraso</span>
+      </div>
+      <button id="theme" class="ghost" type="button" aria-label="Alternar tema claro ou escuro">◐</button>
+    </div>
+    <div class="wrap hero">
+      <h1>Quanto o seu voo costuma atrasar?</h1>
+      <p class="lede">
+        Escolha uma rota e veja como cada companhia e cada horário se saíram nos últimos 12 meses.
+        <span id="coverage" class="muted"></span>
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section id="rota" class="wrap" aria-labelledby="rota-h">
+      <h2 id="rota-h" class="sr-only">Buscar rota</h2>
+      <form id="search" class="search" autocomplete="off">
+        <label class="field">
+          <span>De</span>
+          <input id="origin" list="origin-list" placeholder="Cidade ou código, ex. POA" required />
+          <datalist id="origin-list"></datalist>
+        </label>
+        <button id="swap" type="button" class="ghost swap" aria-label="Inverter origem e destino">⇄</button>
+        <label class="field">
+          <span>Para</span>
+          <input id="dest" list="dest-list" placeholder="Cidade ou código, ex. CGH" required />
+          <datalist id="dest-list"></datalist>
+        </label>
+        <button type="submit" class="primary">Ver rota</button>
+      </form>
+      <div id="popular" class="chips" aria-label="Rotas populares"></div>
+      <p id="search-msg" class="msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="result" class="wrap" hidden aria-live="polite">
+      <div class="headline card">
+        <p class="eyebrow" id="route-name"></p>
+        <p class="hero-figure"><span id="hero-pct">0</span><span class="unit">%</span></p>
+        <p class="hero-sub" id="hero-sub"></p>
+        <p class="muted small" id="hero-note"></p>
+      </div>
+
+      <div class="legend" aria-label="Legenda">
+        <span><i class="sw" style="background:var(--o-on)"></i>No horário (até 15 min)</span>
+        <span><i class="sw" style="background:var(--o-late)"></i>15 a 60 min de atraso</span>
+        <span><i class="sw" style="background:var(--o-very)"></i>Mais de 1 h</span>
+        <span><i class="sw" style="background:var(--o-cancel)"></i>Cancelado</span>
+      </div>
+
+      <article class="card">
+        <header class="card-head">
+          <div>
+            <h3>Por companhia</h3>
+            <p class="muted small">Desfecho na chegada, em relação ao horário previsto.</p>
+          </div>
+          <button class="ghost small" data-table="airlines">Ver tabela</button>
+        </header>
+        <div id="chart-airlines" class="chart"></div>
+        <div id="table-airlines" class="table-wrap" hidden></div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <div>
+            <h3>Por horário de partida</h3>
+            <p class="muted small">Hora local na origem. Barras claras têm menos de 20 voos no período.</p>
+          </div>
+          <div class="card-tools">
+            <select id="hour-airline" aria-label="Companhia"></select>
+            <button class="ghost small" data-table="hours">Ver tabela</button>
+          </div>
+        </header>
+        <div id="chart-hours" class="chart"></div>
+        <div id="table-hours" class="table-wrap" hidden></div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <div>
+            <h3>Comparar duas opções</h3>
+            <p class="muted small">Ex.: a mesma rota de manhã por uma companhia ou à noite por outra.</p>
+          </div>
+        </header>
+        <div class="compare">
+          <fieldset class="option" data-opt="a">
+            <legend>Opção A</legend>
+            <select class="opt-airline" aria-label="Companhia da opção A"></select>
+            <select class="opt-period" aria-label="Período da opção A"></select>
+            <div class="opt-out"></div>
+          </fieldset>
+          <fieldset class="option" data-opt="b">
+            <legend>Opção B</legend>
+            <select class="opt-airline" aria-label="Companhia da opção B"></select>
+            <select class="opt-period" aria-label="Período da opção B"></select>
+            <div class="opt-out"></div>
+          </fieldset>
+        </div>
+        <p id="verdict" class="verdict"></p>
+      </article>
+    </section>
+
+    <section id="brasil" class="wrap" aria-labelledby="brasil-h">
+      <h2 id="brasil-h">O Brasil inteiro</h2>
+
+      <article class="card">
+        <header class="card-head">
+          <div>
+            <h3>Quando os atrasos se acumulam</h3>
+            <p class="muted small">% de voos que chegaram com mais de 15 min de atraso ou foram cancelados, por dia e hora de partida.</p>
+          </div>
+          <div class="card-tools">
+            <select id="heat-airport" aria-label="Aeroporto de origem"></select>
+            <button class="ghost small" data-table="heat">Ver tabela</button>
+          </div>
+        </header>
+        <div id="chart-heat" class="chart"></div>
+        <div id="table-heat" class="table-wrap" hidden></div>
+        <p id="heat-insight" class="insight"></p>
+      </article>
+
+      <div class="two">
+        <article class="card">
+          <header class="card-head">
+            <div>
+              <h3>Aeroportos de origem</h3>
+              <p class="muted small">% no horário dos voos que partem de cada um. A linha mostra a margem de 95%.</p>
+            </div>
+            <button class="ghost small" data-table="rank">Ver tabela</button>
+          </header>
+          <div id="chart-rank" class="chart"></div>
+          <div id="table-rank" class="table-wrap" hidden></div>
+        </article>
+
+        <article class="card">
+          <header class="card-head">
+            <div>
+              <h3>Mapa</h3>
+              <p class="muted small">Tamanho = voos partindo; cor = % atrasados ou cancelados. Clique para usar como origem.</p>
+            </div>
+          </header>
+          <div id="chart-map" class="chart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="sobre" class="wrap about" aria-labelledby="sobre-h">
+      <h2 id="sobre-h">Sobre os dados</h2>
+      <div class="about-grid">
+        <div>
+          <h3>De onde vem</h3>
+          <p>Base <a id="source-link" href="#">Voo Regular Ativo (VRA)</a> da ANAC, dados abertos, informados pelas próprias companhias.
+             Entram só voos <strong>domésticos e regulares</strong> com horário previsto.</p>
+        </div>
+        <div>
+          <h3>Como se mede</h3>
+          <p>O atraso é medido <strong>na chegada</strong>, contra o horário previsto: até 15 min é "no horário", o padrão do setor.
+             Cancelamentos contam à parte. Horas e dias da semana estão no fuso local da origem.</p>
+        </div>
+        <div>
+          <h3>O que não diz</h3>
+          <p>Não explica o motivo do atraso, não prevê o seu voo e não vê remarcações. Rotas com menos de 30 voos no período ficam de fora.
+             A margem de 95% mostra quanto do número pode ser acaso.</p>
+        </div>
+      </div>
+      <p class="muted small">Projeto pessoal de portfólio de <a href="https://github.com/BernardoBonecher">Bernardo Bonecher</a>. Código e método no <a href="https://github.com/BernardoBonecher/atraso">GitHub</a>.</p>
+    </section>
+  </main>
+
+  <div id="loading" class="loading" role="status">Carregando 12 meses de voos…</div>
+  <div id="error" class="error" role="alert" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

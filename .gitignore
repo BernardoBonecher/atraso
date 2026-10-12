@@ -1,0 +1,14 @@
+# Raw downloads (~150 MB); recreate with pipeline/fetch.py
+data/raw/
+
+__pycache__/
+.pytest_cache/
+*.part
+
+# Local tooling
+.claude/
+.vscode/
+.env
+.env.*
+Thumbs.db
+.DS_Store
